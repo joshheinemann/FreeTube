@@ -43,6 +43,12 @@
             :default-value="doSearchPlaylistsWithMatchingVideos"
             @change="doSearchPlaylistsWithMatchingVideos = !doSearchPlaylistsWithMatchingVideos"
           />
+          <FtToggleSwitch
+            :label="$t('User Playlists.Fuzzy Search')"
+            :compact="true"
+            :default-value="doFuzzySearch"
+            @change="doFuzzySearch = !doFuzzySearch"
+          />
           <FtSelect
             class="sortSelect"
             :value="sortBy"
@@ -109,6 +115,8 @@ import FtInput from '../../components/FtInput/FtInput.vue'
 import FtSelect from '../../components/FtSelect/FtSelect.vue'
 import FtToggleSwitch from '../../components/FtToggleSwitch/FtToggleSwitch.vue'
 
+import { matchesSearch } from '../../helpers/strings'
+
 import store from '../../store/index'
 
 import { ctrlFHandler, debounce, getIconForSortPreference } from '../../helpers/utils'
@@ -122,6 +130,7 @@ const searchDataLimit = ref(100)
 const showLoadMoreButton = ref(false)
 const query = ref('')
 const doSearchPlaylistsWithMatchingVideos = ref(false)
+const doFuzzySearch = ref(false)
 const activeData = ref([])
 
 const SORT_BY_OPTIONS = {
@@ -258,7 +267,7 @@ watch(lowerCaseQuery, () => {
   filterPlaylistAsync()
 })
 
-watch(doSearchPlaylistsWithMatchingVideos, () => {
+watch([doSearchPlaylistsWithMatchingVideos, doFuzzySearch], () => {
   searchDataLimit.value = 100
   filterPlaylistAsync()
   saveStateInRouter()
@@ -335,14 +344,19 @@ function filterPlaylist() {
 
       if (
         findMatchingVideos &&
-        playlist.videos.some((v) => {
-          return v.author?.toLowerCase().includes(lowerCaseQuery_) || v.title.toLowerCase().includes(lowerCaseQuery_)
+        playlist.videos.some((video) => {
+          return matchesSearch(video.author, lowerCaseQuery_, doFuzzySearch.value) ||
+            matchesSearch(video.title, lowerCaseQuery_, doFuzzySearch.value)
         })
       ) {
         return true
       }
 
-      return playlist.playlistName.toLowerCase().includes(lowerCaseQuery_)
+      return matchesSearch(
+        playlist.playlistName,
+        lowerCaseQuery_,
+        doFuzzySearch.value
+      )
     })
 
     const searchDataLimit_ = searchDataLimit.value
@@ -379,6 +393,9 @@ async function saveStateInRouter() {
     if (doSearchPlaylistsWithMatchingVideos.value) {
       location.query.doSearchPlaylistsWithMatchingVideos = 'true'
     }
+    if (doFuzzySearch.value) {
+      location.query.doFuzzySearch = 'true'
+    }
   }
 
   try {
@@ -396,6 +413,7 @@ const route = useRoute()
 
 const oldQuery = route.query.query
 if (oldQuery != null && oldQuery !== '') {
+  doFuzzySearch.value = route.query.doFuzzySearch === 'true'
   handleQueryChange(
     oldQuery,
     route.query.searchDataLimit,
