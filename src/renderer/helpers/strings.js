@@ -76,3 +76,39 @@ export function getFirstCharacter(text, locale) {
   const firstSegment = segmenter.segment(text)[Symbol.iterator]().next().value
   return firstSegment.segment
 }
+
+/**
+ * Checks whether text matches a query using substring or fuzzy matching.
+ *
+ * @param {string | null | undefined} text
+ * @param {string} query
+ * @param {boolean} fuzzy
+ * @returns {boolean}
+ */
+
+export function matchesSearch(text, query, fuzzy) {
+  const normalizedText = (text ?? '').toLowerCase()
+  const normalizedQuery = query.toLowerCase()
+
+  if (!fuzzy) {
+    return normalizedText.includes(normalizedQuery)
+  }
+
+  const terms = normalizedQuery.trim().split(/\s+/)
+
+  return terms.every((term) => {
+    let nextIndex = 0
+
+    for (const character of term) {
+      const matchIndex = normalizedText.indexOf(character, nextIndex)
+
+      if (matchIndex === -1) {
+        return false
+      }
+
+      nextIndex = matchIndex + character.length
+    }
+
+    return true
+  })
+}

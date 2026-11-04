@@ -227,6 +227,12 @@
             @input="updateQueryDebounced"
             @clear="updateQueryDebounced('')"
           />
+          <FtToggleSwitch
+            :label="$t('User Playlists.Fuzzy Search')"
+            :compact="true"
+            :default-value="props.doFuzzySearch"
+            @change="emit('fuzzy-search-change', !props.doFuzzySearch)"
+          />
         </div>
       </div>
       <FtPrompt
@@ -272,6 +278,7 @@ import { useRouter } from 'vue-router'
 import FtFlexBox from '../ft-flex-box/ft-flex-box.vue'
 import FtIconButton from '../FtIconButton/FtIconButton.vue'
 import FtInput from '../FtInput/FtInput.vue'
+import FtToggleSwitch from '../FtToggleSwitch/FtToggleSwitch.vue'
 import FtPrompt from '../FtPrompt/FtPrompt.vue'
 import FtShareButton from '../FtShareButton/FtShareButton.vue'
 
@@ -377,9 +384,20 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  doFuzzySearch: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['enter-edit-mode', 'exit-edit-mode', 'search-video-query-change', 'prompt-open', 'prompt-close'])
+const emit = defineEmits([
+  'enter-edit-mode',
+  'exit-edit-mode',
+  'search-video-query-change',
+  'fuzzy-search-change',
+  'prompt-open',
+  'prompt-close',
+])
 
 const { locale, t } = useI18n()
 

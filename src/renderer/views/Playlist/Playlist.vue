@@ -43,12 +43,14 @@
           :more-video-data-available="moreVideoDataAvailable"
           :search-video-mode-allowed="isUserPlaylistRequested && shownVideoCount > 1"
           :search-query-text="searchQueryTextRequested"
+          :do-fuzzy-search="doFuzzySearch"
           :theme="listType === 'list' ? 'base' : 'top-bar'"
           class="playlistInfo"
           @dragstart.prevent
           @enter-edit-mode="playlistInEditMode = true"
           @exit-edit-mode="playlistInEditMode = false"
           @search-video-query-change="handleVideoSearchQueryChange"
+          @fuzzy-search-change="handleFuzzySearchChange"
           @prompt-open="promptOpen = true"
           @prompt-close="promptOpen = false"
         />
@@ -238,6 +240,7 @@ import {
 } from '../../helpers/utils'
 import { invidiousGetPlaylistInfo, youtubeImageUrlToInvidious } from '../../helpers/api/invidious'
 import { getSortedPlaylistItems, videoDurationPresent, videoDurationWithFallback, SORT_BY_VALUES } from '../../helpers/playlists'
+import { matchesSearch } from '../../helpers/strings'
 import { MOBILE_WIDTH_THRESHOLD, PLAYLIST_HEIGHT_FORCE_LIST_THRESHOLD } from '../../../constants'
 
 const { locale, t } = useI18n()
@@ -276,6 +279,7 @@ const playlistInEditMode = ref(false)
 const forceListView = ref(false)
 let alreadyShownNotice = false
 const videoSearchQuery = ref('')
+const doFuzzySearch = ref(false)
 const promptOpen = ref(false)
 /** @type {import('vue').Ref<string[]>} */
 const toBeDeletedPlaylistItemIds = ref([])
@@ -368,10 +372,13 @@ const sometimesFilteredUserPlaylistItems = computed(() => {
   }
 
   const processedVideoSearchQuery_ = processedVideoSearchQuery.value
+  const fuzzy = doFuzzySearch.value
 
-  return sortedPlaylistItems.value.filter((v) => {
-    return (typeof v.title === 'string' && v.title.toLowerCase().includes(processedVideoSearchQuery_)) ||
-      (typeof v.author === 'string' && v.author.toLowerCase().includes(processedVideoSearchQuery_))
+  return sortedPlaylistItems.value.filter((video) => {
+    return (typeof video.title === 'string' &&
+      matchesSearch(video.title, processedVideoSearchQuery_, fuzzy)) ||
+      (typeof video.author === 'string' &&
+        matchesSearch(video.author, processedVideoSearchQuery_, fuzzy))
   })
 })
 
@@ -1129,6 +1136,15 @@ function handleVideoSearchQueryChange(value) {
 }
 
 /**
+ * @param {boolean} value
+ */
+function handleFuzzySearchChange(value) {
+  doFuzzySearch.value = value
+
+  saveStateInRouter(videoSearchQuery.value)
+}
+
+/**
  * @param {string} query
  */
 async function saveStateInRouter(query) {
@@ -1138,6 +1154,10 @@ async function saveStateInRouter(query) {
 
   if (query !== '') {
     routeQuery.searchQueryText = query
+  }
+
+  if (doFuzzySearch.value) {
+    routeQuery.doFuzzySearch = 'true'
   }
 
   try {
@@ -1154,8 +1174,12 @@ async function saveStateInRouter(query) {
   }
 }
 
-if (isUserPlaylistRequested.value && searchQueryTextPresent.value) {
-  handleVideoSearchQueryChange(searchQueryTextRequested.value)
+if (isUserPlaylistRequested.value) {
+  doFuzzySearch.value = route.query.doFuzzySearch === 'true'
+
+  if (searchQueryTextPresent.value) {
+    handleVideoSearchQueryChange(searchQueryTextRequested.value)
+  }
 }
 
 function handleResize() {
